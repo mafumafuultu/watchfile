@@ -1,0 +1,4 @@
+watch_path: "./note.md"
+server:
+  address: "127.0.0.1"
+  port: 9000

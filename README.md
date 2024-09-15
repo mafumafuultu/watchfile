@@ -26,7 +26,7 @@ Watchfile is a server that monitors a specified Markdown file for changes and no
 `127.0.0.1/version`
 ```json
 {
-	"app_name": "this app name",
+    "app_name": "this app name",
     "version": "app version",
     "repository": "URL",
 }

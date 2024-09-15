@@ -1,6 +1,7 @@
 
 
 # Watchfile
+![Static Badge](https://img.shields.io/badge/version-0.1.1-blue)
 
 Watchfile is a server that monitors a specified Markdown file for changes and notifies via WebSocket when a change is detected.
 
@@ -18,7 +19,9 @@ Watchfile is a server that monitors a specified Markdown file for changes and no
 ├── note.md        <- watch target
 └── static
     ├── index.html    `127.0.0.1/`
-    └── test.html     `127.0.0.1/test`
+    ├── test.html     `127.0.0.1/test`
+    ├── :
+    └── yourfile.html    `127.0.0.1/yourfile.html`
 ```
 
 ## Version check

@@ -1,4 +1,5 @@
-use std::{fs, time::Duration};
+use std::{fs, path::PathBuf, time::Duration};
+use actix_files::NamedFile;
 use actix_web::{
     get, middleware::Logger, rt, web, App, HttpRequest, HttpResponse, HttpServer, Responder
 };
@@ -31,14 +32,24 @@ struct AppInfo {
     repository: String,
 }
 
+async fn indexv(req: HttpRequest) -> actix_web::Result<NamedFile> {
+    let path: PathBuf = req.match_info().query("filename").parse().unwrap();
+    let files =  match path.to_str() {
+        Some(other) => NamedFile::open(format!("static/{}", other))?,
+        None => todo!(),
+    };
+
+    Ok(files)
+}
+
 #[get("/")]
-async fn index(_req: HttpRequest) -> impl Responder {
-    HttpResponse::Ok().body(include_str!("./static/index.html"))
+async fn index(_req: HttpRequest) -> actix_web::Result<NamedFile> {
+    Ok(NamedFile::open("static/index.html")?)
 }
 
 #[get("/test")]
-async fn test(_req: HttpRequest) -> impl Responder {
-    HttpResponse::Ok().body(include_str!("./static/test.html"))
+async fn test(_req: HttpRequest) -> actix_web::Result<NamedFile> {
+    Ok(NamedFile::open("static/test.html")?)
 }
 
 #[get("/version")]
@@ -65,6 +76,7 @@ async fn main() -> std::io::Result<()> {
             .service(test)
             .service(version)
             .route("/watch", web::get().to(watch))
+            .route("/{filename:.*}", web::get().to(indexv))
     })
     .bind((config.server.address, config.server.port))
     .expect(format!("Can not bind {}", address.as_str()).as_str())

@@ -1,6 +1,6 @@
 [package]
 name = "watchfile"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2021"
 
 [dependencies]
@@ -10,8 +10,8 @@ actix-web-actors = "4.3.1"
 actix-ws = "0.3.0"
 futures = "0.3.30"
 futures-util = "0.3.30"
-markdown = "1.0.0-alpha.20"
 notify = "6.1.1"
+pulldown-cmark = "0.12.1"
 serde = {version = "1.0.210" , features = ["derive"] }
 serde_yaml = "0.9.34"
 tokio = { version = "1.40.0", features = ["full"] }

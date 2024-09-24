@@ -32,7 +32,10 @@ struct AppInfo {
     repository: String,
 }
 
-async fn indexv(req: HttpRequest) -> actix_web::Result<NamedFile> {
+/// Handle static file requests.
+///
+/// This function serves static files from the `static` directory.
+async fn static_files(req: HttpRequest) -> actix_web::Result<NamedFile> {
     let path: PathBuf = req.match_info().query("filename").parse().unwrap();
     let files =  match path.to_str() {
         Some(other) => NamedFile::open(format!("static/{}", other))?,
@@ -76,7 +79,7 @@ async fn main() -> std::io::Result<()> {
             .service(test)
             .service(version)
             .route("/watch", web::get().to(watch))
-            .route("/{filename:.*}", web::get().to(indexv))
+            .route("/{filename:.*}", web::get().to(static_files))
     })
     .bind((config.server.address, config.server.port))
     .expect(format!("Can not bind {}", address.as_str()).as_str())
@@ -84,6 +87,7 @@ async fn main() -> std::io::Result<()> {
     .await
 }
 
+/// Watch file
 async fn watch(req: HttpRequest, stream: web::Payload) -> Result<HttpResponse, actix_web::Error> {
     let (res, session, stream) = actix_ws::handle(&req, stream).expect("Can not create session");
     let _stream = stream
@@ -94,15 +98,11 @@ async fn watch(req: HttpRequest, stream: web::Payload) -> Result<HttpResponse, a
         if let Err(e) = async_watch(config.watch_path, session).await {
             println!("watch error: {:?}", e);
         }
-        println!("done");
     });
     Ok(res)
 }
 
-async fn async_watch<P: AsRef<std::path::Path>>(
-    path: P,
-    mut session: actix_ws::Session,
-) -> notify::Result<()> {
+async fn async_watch<P: AsRef<std::path::Path>>( path: P, mut session: actix_ws::Session, ) -> notify::Result<()> {
     let (mut watcher, mut rx) = async_watcher();
 
     watcher
@@ -114,47 +114,48 @@ async fn async_watch<P: AsRef<std::path::Path>>(
         let mut before_meta = target_path.metadata().unwrap().modified().unwrap();
         while let Some(res) = rx.next().await {
             match res {
-                Ok(event) => {
+                Ok(_event) => {
                     let new_meta = target_path.metadata().unwrap().modified().unwrap();
                     if before_meta < new_meta {
-                        if let Ok(text) = tokio::fs::read_to_string(event.paths.get(0).unwrap()).await {
-                            session.text(markdown::to_html_with_options(
-                                &text,
-                                &markdown::Options::gfm(),
-                            ).expect("markdown error")).await.unwrap();
+                        if let Ok(text) = tokio::fs::read_to_string(&target_path).await {
+                            if !text.is_empty() {
+                                let _ = session.text(mark_cmrk(&text)).await;
+                                before_meta = new_meta;
+                            }
                         }
-
-                        before_meta = new_meta;
                     }
                 }
-                Err(err) => println!("watch error: {:?}", err),
+                Err(err) => println!("watch error: {:?}", err)
             }
         }
     }
     Ok(())
 }
 
-fn async_watcher() -> (
-    notify::RecommendedWatcher,
-    Receiver<Result<notify::Event, notify::Error>>,
-) {
+/// Create async watcher
+fn async_watcher() -> ( notify::RecommendedWatcher, Receiver<Result<notify::Event, notify::Error>> ) {
     let (mut tx, rx) = channel(16);
     let conf = Config::default().with_poll_interval(Duration::from_secs(1));
-    let watcher: notify::RecommendedWatcher = RecommendedWatcher::new(
-        move |res: Result<notify::Event, notify::Error>| {
+    let watcher = RecommendedWatcher::new(move | res: Result<notify::Event, notify::Error>| {
             if let Ok(ref _event) = res {
                 futures::executor::block_on(async { tx.send(res).await.unwrap() })
             }
         },
         conf,
-    )
-    .expect("Can not create watcher");
+    ).expect("Can not create watcher");
 
     (watcher, rx)
 }
 
-
+/// Load config.yaml
 fn get_app_config() -> AppConfig {
     let config_str = fs::read_to_string(YML_PATH).unwrap();
     serde_yaml::from_str(&config_str).expect("Unable to parse config.yaml")
+}
+
+// Convert markdown to html
+fn mark_cmrk(source: &str) -> String {
+    let mut buf = String::new();
+    pulldown_cmark::html::write_html_fmt(&mut buf, pulldown_cmark::Parser::new_ext(source, pulldown_cmark::Options::all())).expect(" pulldown_cmark error");
+    buf.to_string()
 }

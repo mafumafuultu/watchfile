@@ -1,7 +1,7 @@
 
 
 # Watchfile
-![Static Badge](https://img.shields.io/badge/version-0.1.1-blue)
+![Static Badge](https://img.shields.io/badge/version-0.2.0-blue)
 
 Watchfile is a server that monitors a specified Markdown file for changes and notifies via WebSocket when a change is detected.
 
